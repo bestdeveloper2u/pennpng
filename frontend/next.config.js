@@ -23,7 +23,8 @@ const nextConfig = {
     ];
   },
   allowedDevOrigins: [
-    '43ce7abe-879f-4b15-9ac2-cd655fcf04a3-00-19c7zf71h2x1y.riker.replit.dev',
+    '29fe3c0c-a17a-482e-96dc-d2c2ca3d96f5-00-pvxhr9n0dga8.riker.replit.dev',
+    '*.riker.replit.dev',
     'localhost',
     '127.0.0.1',
     '0.0.0.0',
