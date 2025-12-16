@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web", "postgresql-16"]
+modules = ["=-20", "web", "postgresql-16"]
 [agent]
 expertMode = true
 
@@ -36,3 +36,6 @@ externalPort = 3001
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[userenv.development]
+DATABASE_URL = "postgresql://neondb_owner:npg_rkjF2Kb5mntw@ep-morning-field-adnv4g6c-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
