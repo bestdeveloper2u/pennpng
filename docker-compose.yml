@@ -1,0 +1,83 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        API_BASE_URL: ${API_BASE_URL}
+    env_file:
+      - .env
+      - ./frontend/.env
+    environment:
+      PORT: ${FRONTEND_PORT}
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+      API_BASE_URL: ${API_BASE_URL}
+    expose:
+      - "${FRONTEND_PORT}"
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      # redirect http → https
+      - "traefik.http.middlewares.${ENVIRONMENT}-https.redirectscheme.scheme=https"
+      # HTTP router (redirects to HTTPS)
+      - "traefik.http.routers.${ENVIRONMENT}-frontend-web.rule=Host(`${DOMAIN}`) || Host(`${WWW_DOMAIN}`)"
+      - "traefik.http.routers.${ENVIRONMENT}-frontend-web.entrypoints=web"
+      - "traefik.http.routers.${ENVIRONMENT}-frontend-web.middlewares=${ENVIRONMENT}-https"
+      - "traefik.http.routers.${ENVIRONMENT}-frontend-web.priority=10"
+      # HTTPS router
+      - "traefik.http.routers.${ENVIRONMENT}-frontend-secure.rule=Host(`${DOMAIN}`) || Host(`${WWW_DOMAIN}`)"
+      - "traefik.http.routers.${ENVIRONMENT}-frontend-secure.entrypoints=websecure"
+      - "traefik.http.routers.${ENVIRONMENT}-frontend-secure.tls.certresolver=le"
+      - "traefik.http.routers.${ENVIRONMENT}-frontend-secure.priority=10"
+      - "traefik.http.routers.${ENVIRONMENT}-frontend-secure.service=${ENVIRONMENT}-frontend-svc"
+      # Service definition for frontend
+      - "traefik.http.services.${ENVIRONMENT}-frontend-svc.loadbalancer.server.port=${FRONTEND_PORT}"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - .env
+      - ./backend/.env
+    environment:
+      PORT: ${PORT}
+      CLIENT_URL: ${CLIENT_URL}
+    command: npm run start:server
+    volumes:
+      - ./backend/uploads:/app/backend/uploads
+    expose:
+      - "${PORT}"
+    networks:
+      - web
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      # redirect http → https
+      - "traefik.http.middlewares.${ENVIRONMENT}-https.redirectscheme.scheme=https"
+      # API over HTTP (redirects to HTTPS)
+      - "traefik.http.routers.${ENVIRONMENT}-backend-api-web.rule=(Host(`${DOMAIN}`) || Host(`${WWW_DOMAIN}`)) && PathPrefix(`/api/`)"
+      - "traefik.http.routers.${ENVIRONMENT}-backend-api-web.entrypoints=web"
+      - "traefik.http.routers.${ENVIRONMENT}-backend-api-web.middlewares=${ENVIRONMENT}-https"
+      - "traefik.http.routers.${ENVIRONMENT}-backend-api-web.priority=100"
+      - "traefik.http.routers.${ENVIRONMENT}-backend-api-web.service=${ENVIRONMENT}-backend-svc"
+      # API over HTTPS
+      - "traefik.http.routers.${ENVIRONMENT}-backend-api-secure.rule=(Host(`${DOMAIN}`) || Host(`${WWW_DOMAIN}`)) && PathPrefix(`/api/`)"
+      - "traefik.http.routers.${ENVIRONMENT}-backend-api-secure.entrypoints=websecure"
+      - "traefik.http.routers.${ENVIRONMENT}-backend-api-secure.tls.certresolver=le"
+      - "traefik.http.routers.${ENVIRONMENT}-backend-api-secure.priority=100"
+      - "traefik.http.routers.${ENVIRONMENT}-backend-api-secure.service=${ENVIRONMENT}-backend-svc"
+      # Service definition for backend
+      - "traefik.http.services.${ENVIRONMENT}-backend-svc.loadbalancer.server.port=${PORT}"
+
+networks:
+  web:
+    external: true
+    name: web
+  backend:
+    external: true
+    name: backend

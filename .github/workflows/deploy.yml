@@ -1,0 +1,146 @@
+name: Build & Deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment_branch:
+        required: false
+        type: string
+  push:
+    branches: [staging, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci-frontend:
+    name: Frontend CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package.json
+
+      - name: Install Dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Build React
+        env:
+          CI: true
+        run: npm run build
+
+  ci-backend:
+    name: Backend CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Run Tests
+        run: npm test --if-present
+
+  build-docker:
+    name: Docker Compose Build
+    runs-on: ubuntu-latest
+    needs:
+      - ci-frontend
+      - ci-backend
+    env:
+      DOCKER_BUILDKIT: 1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # docker-compose requires .env files to exist
+      - name: Create empty env files for CI
+        run: |
+          cp .env.example .env
+          cp backend/.env.example backend/.env
+          cp frontend/.env.example frontend/.env
+
+      - name: Validate Compose File
+        run: docker compose -f docker-compose.yml config
+
+      - name: Build Application Images
+        run: docker compose -f docker-compose.yml build
+
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    needs:
+      - build-docker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add Known Hosts (Production)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PRODUCTION_KNOWN_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Add Known Hosts (Staging)
+        if: github.ref == 'refs/heads/staging'
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_KNOWN_HOST }}" >> ~/.ssh/known_hosts
+      
+      - name: Deploy to Production
+        if: github.ref == 'refs/heads/main'
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.PRODUCTION_SERVER }} << 'SSH'
+            set -e
+            cd /var/apps/pennstack.com
+            git fetch origin main
+            git reset --hard origin/main
+            docker compose pull || true
+            docker compose up -d --build
+          SSH
+
+      - name: Deploy to Staging
+        if: github.ref == 'refs/heads/staging'
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.STAGING_SERVER }} << 'SSH'
+            set -e
+            cd /var/apps/staging.pennstack.com
+            git fetch origin staging
+            git reset --hard origin/staging
+            docker compose pull || true
+            docker compose up -d --build
+          SSH
