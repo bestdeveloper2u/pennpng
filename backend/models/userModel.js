@@ -1,16 +1,16 @@
 const { pool } = require('../config/db');
 const bcrypt = require('bcrypt');
 
-const USER_COLUMNS = ['id', 'email', 'username', 'role', 'created_at', 'updated_at'];
-const USER_COLUMNS_WITH_PASSWORD = [...USER_COLUMNS, 'password'];
+const USER_COLUMNS = ['id', 'email', 'username', 'role', 'first_name', 'last_name', 'phone', 'avatar_url', 'is_active', 'created_at', 'updated_at'];
+const USER_COLUMNS_WITH_PASSWORD = [...USER_COLUMNS, 'password_hash as password'];
 
 async function createUser({ email, username, password, role = 'contributor' }) {
   const saltRounds = 10;
   const hashedPassword = await bcrypt.hash(password, saltRounds);
   
   const query = `
-    INSERT INTO users (email, username, password, role)
-    VALUES ($1, $2, $3, $4)
+    INSERT INTO users (email, username, password_hash, role, is_active)
+    VALUES ($1, $2, $3, $4, true)
     RETURNING ${USER_COLUMNS.join(', ')};
   `;
   
@@ -90,7 +90,7 @@ async function updatePassword(id, newPassword) {
   
   const query = `
     UPDATE users
-    SET password = $1, updated_at = NOW()
+    SET password_hash = $1, updated_at = NOW()
     WHERE id = $2
     RETURNING ${USER_COLUMNS.join(', ')};
   `;
