@@ -1,4 +1,6 @@
-const DEFAULT_API_BASE_URL = 'http://localhost:5000/api';
+const DEFAULT_API_BASE_URL = typeof window !== 'undefined' 
+  ? `${window.location.origin}/api` 
+  : 'http://localhost:3001/api';
 
 function resolveBaseUrl(override) {
   if (override) return override;

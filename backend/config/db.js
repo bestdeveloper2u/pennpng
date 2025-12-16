@@ -1,8 +1,13 @@
 const { Pool } = require('pg');
 
-const connectionOptions = process.env.DATABASE_URL
+const rawDbUrl = process.env.DATABASE_URL || '';
+const connectionString = rawDbUrl.startsWith("psql '") 
+  ? rawDbUrl.slice(6, -1) 
+  : rawDbUrl;
+
+const connectionOptions = connectionString
   ? {
-      connectionString: process.env.DATABASE_URL,
+      connectionString: connectionString,
       ssl: { rejectUnauthorized: false },
     }
   : {

@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fileRoutes = require('./routes/fileRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+const imageRoutes = require('./routes/imageRoutes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 const { pool } = require('./config/db');
 const { log, logError } = require('./utils/logger');
@@ -18,11 +20,13 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/files', fileRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/images', imageRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
 
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 3001;
 
 pool
   .connect()
