@@ -108,10 +108,11 @@ export default function HomePage({ categories = [], images = [], trendingTags = 
 }
 
 export async function getServerSideProps() {
+  const API_URL = process.env.API_URL || 'http://0.0.0.0:3001';
   try {
     const [categoriesRes, imagesRes] = await Promise.all([
-      fetch('http://localhost:3001/api/categories').then(r => r.ok ? r.json() : { categories: [] }).catch(() => ({ categories: [] })),
-      fetch('http://localhost:3001/api/images?limit=12').then(r => r.ok ? r.json() : { images: [] }).catch(() => ({ images: [] }))
+      fetch(`${API_URL}/api/categories`).then(r => r.ok ? r.json() : { categories: [] }).catch(() => ({ categories: [] })),
+      fetch(`${API_URL}/api/images?limit=12`).then(r => r.ok ? r.json() : { images: [] }).catch(() => ({ images: [] }))
     ]);
 
     return {
