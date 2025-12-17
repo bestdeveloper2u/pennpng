@@ -23,8 +23,12 @@ const nextConfig = {
     ];
   },
   allowedDevOrigins: [
-    '29fe3c0c-a17a-482e-96dc-d2c2ca3d96f5-00-pvxhr9n0dga8.riker.replit.dev',
+    '*.replit.dev',
     '*.riker.replit.dev',
+    '*.sisko.replit.dev',
+    '*.kirk.replit.dev',
+    '*.janeway.replit.dev',
+    '*.picard.replit.dev',
     'localhost',
     '127.0.0.1',
     '0.0.0.0',
